@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_theme.dart';
 import '../../presentation/providers/game_state_provider.dart';
 import '../../presentation/providers/theme_provider.dart';
 import '../../domain/chess_engine/game_rules.dart';
@@ -182,9 +183,4 @@ class GameControls extends StatelessWidget {
       ),
     );
   }
-}
-
-// Add AppTheme reference if needed
-class AppTheme {
-  static const Color checkHighlight = Color(0xFFFF4444);
 }

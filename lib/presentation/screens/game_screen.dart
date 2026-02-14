@@ -1,155 +1,341 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/chess_piece.dart';
-import '../../core/theme/app_theme.dart';
 import '../../presentation/providers/game_state_provider.dart';
 import '../../presentation/widgets/chess_board_widget.dart';
-import '../../presentation/widgets/game_controls.dart';
 
-/// Main game screen displaying the chess board and controls
+/// Main game screen with professional chess.com-style design
 class GameScreen extends StatelessWidget {
   const GameScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('♟ Chess Master'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () => _showAboutDialog(context),
-            tooltip: 'About',
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(gradient: AppTheme.boardGradient),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              // Responsive layout
-              final isWideScreen = constraints.maxWidth > 800;
+      backgroundColor: const Color(0xFFE8E8E8),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth > 900;
 
-              if (isWideScreen) {
-                // Desktop/tablet layout - side by side
-                return Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 600),
-                            child: const ChessBoardWidget(),
-                          ),
+            if (isWideScreen) {
+              return Row(
+                children: [
+                  // Left Sidebar
+                  Container(
+                    width: 320,
+                    margin: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Column(
-                            children: [
-                              const GameControls(),
-                              const SizedBox(height: 16),
-                              _buildMoveHistory(context),
-                              const SizedBox(height: 16),
-                              _buildCapturedPieces(context),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              } else {
-                // Mobile layout - stacked
-                return SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        const GameControls(),
-                        const SizedBox(height: 16),
-                        const ChessBoardWidget(),
-                        const SizedBox(height: 16),
-                        _buildCapturedPieces(context),
-                        const SizedBox(height: 16),
-                        _buildMoveHistory(context),
                       ],
                     ),
+                    child: _buildSidebar(context),
                   ),
-                );
-              }
-            },
-          ),
+                  // Main game area
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.only(
+                        top: 16,
+                        right: 16,
+                        bottom: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: _buildGameArea(context),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              // Mobile layout
+              return Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: _buildGameArea(context),
+              );
+            }
+          },
         ),
       ),
     );
   }
 
-  Widget _buildMoveHistory(BuildContext context) {
+  Widget _buildSidebar(BuildContext context) {
     return Consumer<GameStateProvider>(
       builder: (context, gameState, child) {
-        final moves = gameState.moveHistory;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Profile section
+              Center(
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 60,
+                      backgroundColor: Colors.grey[300],
+                      child: const Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Play Chess',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
 
-        if (moves.isEmpty) {
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'No moves yet',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+              // Difficulty selector
+              const Text(
+                'Difficulty',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: _buildButton(context, 'Easy', false)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildButton(context, 'Medium', true)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildButton(context, 'Hard', false)),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Time control
+              const Text(
+                'Time Control',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: _buildButton(context, '3 min', false)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildButton(context, '5 min', true)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildButton(context, '10 min', false)),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Color selection
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.circle, size: 16),
+                      label: const Text('White'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.circle, size: 16),
+                      label: const Text('Black'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Theme colors
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildColorCircle(const Color(0xFF8CA2AD)),
+                  const SizedBox(width: 12),
+                  _buildColorCircle(const Color(0xFF86C232)),
+                  const SizedBox(width: 12),
+                  _buildColorCircle(const Color(0xFFE94B3C)),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Action buttons
+              ElevatedButton(
+                onPressed: () => gameState.newGame(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2C2C2C),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('New Game'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('Settings'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGameArea(BuildContext context) {
+    return Consumer<GameStateProvider>(
+      builder: (context, gameState, child) {
+        return Column(
+          children: [
+            // Top player card
+            _buildPlayerCard(
+              context,
+              'Opponent',
+              gameState.currentTurn == PieceColor.black,
+              const Color(0xFF2C2C2C),
+              isTop: true,
+            ),
+
+            // Chess board
+            Expanded(
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: const ChessBoardWidget(),
+                  ),
                 ),
               ),
             ),
-          );
-        }
 
-        return Card(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            // Bottom player card
+            _buildPlayerCard(
+              context,
+              'You',
+              gameState.currentTurn == PieceColor.white,
+              const Color(0xFF22A35A),
+              isTop: false,
+            ),
+
+            // Bottom controls
+            _buildBottomControls(context),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPlayerCard(
+    BuildContext context,
+    String name,
+    bool isActive,
+    Color timerColor, {
+    required bool isTop,
+  }) {
+    return Consumer<GameStateProvider>(
+      builder: (context, gameState, child) {
+        final capturedPieces = gameState.capturedPieces
+            .where(
+              (p) => isTop
+                  ? p.color == PieceColor.white
+                  : p.color == PieceColor.black,
+            )
+            .toList();
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: isTop
+                  ? BorderSide(color: Colors.grey[200]!)
+                  : BorderSide.none,
+              top: !isTop
+                  ? BorderSide(color: Colors.grey[200]!)
+                  : BorderSide.none,
+            ),
+          ),
+          child: Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Move History',
-                  style: Theme.of(context).textTheme.titleMedium,
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.grey[300],
+                child: Icon(
+                  isTop ? Icons.computer : Icons.person,
+                  color: Colors.grey[600],
                 ),
               ),
-              const Divider(height: 1),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 200),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: (moves.length / 2).ceil(),
-                  itemBuilder: (context, index) {
-                    final moveNumber = index + 1;
-                    final whiteMove = moves[index * 2];
-                    final blackMove = index * 2 + 1 < moves.length
-                        ? moves[index * 2 + 1]
-                        : null;
-
-                    return ListTile(
-                      dense: true,
-                      leading: Text(
-                        '$moveNumber.',
-                        style: Theme.of(context).textTheme.labelSmall,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
-                      title: Row(
-                        children: [
-                          Expanded(child: Text(whiteMove.toAlgebraic())),
-                          if (blackMove != null)
-                            Expanded(child: Text(blackMove.toAlgebraic())),
-                        ],
+                    ),
+                    if (capturedPieces.isNotEmpty)
+                      Text(
+                        capturedPieces.map((p) => p.symbol).join(' '),
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                       ),
-                    );
-                  },
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: isActive ? timerColor : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '09:26',
+                  style: TextStyle(
+                    color: isActive ? Colors.white : Colors.grey[700],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
@@ -159,64 +345,54 @@ class GameScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCapturedPieces(BuildContext context) {
-    return Consumer<GameStateProvider>(
-      builder: (context, gameState, child) {
-        final capturedPieces = gameState.capturedPieces;
-
-        if (capturedPieces.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        final whiteCaptured = capturedPieces
-            .where((p) => p.color == PieceColor.white)
-            .toList();
-        final blackCaptured = capturedPieces
-            .where((p) => p.color == PieceColor.black)
-            .toList();
-
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Captured Pieces',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                if (whiteCaptured.isNotEmpty) ...[
-                  Text(
-                    'White: ${whiteCaptured.map((p) => p.symbol).join(' ')}',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ],
-                if (blackCaptured.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Black: ${blackCaptured.map((p) => p.symbol).join(' ')}',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ],
-              ],
-            ),
+  Widget _buildBottomControls(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(icon: const Icon(Icons.play_arrow), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.chevron_left), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.chevron_right), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.flip_camera_android),
+            onPressed: () {},
           ),
-        );
-      },
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.close), onPressed: () {}),
+        ],
+      ),
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
-    showAboutDialog(
-      context: context,
-      applicationName: 'Chess Master',
-      applicationVersion: '1.0.0',
-      applicationLegalese: '© 2024 Next-Generation Chess Game',
-      children: [
-        const SizedBox(height: 16),
-        const Text('A beautiful, feature-rich chess game built with Flutter.'),
-      ],
+  Widget _buildButton(BuildContext context, String text, bool isSelected) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.blue : Colors.grey[200],
+        borderRadius: BorderRadius.circular(6),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.w500,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorCircle(Color color) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.grey[300]!, width: 2),
+      ),
     );
   }
 }

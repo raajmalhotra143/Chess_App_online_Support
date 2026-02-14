@@ -28,7 +28,6 @@ class AppTheme {
           color: colorScheme.onSurface,
         ),
       ),
-
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 2,
@@ -68,7 +67,6 @@ class AppTheme {
           color: colorScheme.onSurface,
         ),
       ),
-
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 2,
@@ -149,6 +147,18 @@ class AppTheme {
   static const Color lightSquare = Color(0xFFEECE93);
   static const Color darkSquare = Color(0xFFB8885C);
   static const Color selectedSquare = Color(0xFFBACa44);
-  static const Color validMoveHighlight = Color(0x8800FF00);
+  static const Color validMoveHighlight = Color(0xAA66FF66); // Brighter green
   static const Color checkHighlight = Color(0xFFFF4444);
+
+  // Premium Board Colors
+  static const Color boardBorder = Color(0xFF4A3B2A);
+  static const Color glassBackground = Color(0x22FFFFFF);
+  static const Color premiumLightSquare = Color(0xFFF0D9B5);
+  static const Color premiumDarkSquare = Color(0xFFB58863);
+
+  static const LinearGradient boardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF2C3E50), Color(0xFF4CA1AF)],
+  );
 }

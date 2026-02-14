@@ -25,6 +25,8 @@ class GameStateProvider extends ChangeNotifier {
   List<ChessMove> get legalMovesForSelectedPiece => _legalMovesForSelectedPiece;
   PieceColor get currentTurn => _board.currentTurn;
   List<ChessMove> get moveHistory => _board.moveHistory;
+  ChessMove? get lastMove =>
+      _board.moveHistory.isNotEmpty ? _board.moveHistory.last : null;
   List<ChessPiece> get capturedPieces => _board.capturedPieces;
 
   /// Selects a piece at the given position

@@ -22,67 +22,70 @@ class GameScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // Responsive layout
-            final isWideScreen = constraints.maxWidth > 800;
+      body: Container(
+        decoration: BoxDecoration(gradient: AppTheme.boardGradient),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Responsive layout
+              final isWideScreen = constraints.maxWidth > 800;
 
-            if (isWideScreen) {
-              // Desktop/tablet layout - side by side
-              return Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 600),
-                          child: const ChessBoardWidget(),
+              if (isWideScreen) {
+                // Desktop/tablet layout - side by side
+                return Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 600),
+                            child: const ChessBoardWidget(),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          children: [
-                            const GameControls(),
-                            const SizedBox(height: 16),
-                            _buildMoveHistory(context),
-                            const SizedBox(height: 16),
-                            _buildCapturedPieces(context),
-                          ],
+                    Expanded(
+                      flex: 2,
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            children: [
+                              const GameControls(),
+                              const SizedBox(height: 16),
+                              _buildMoveHistory(context),
+                              const SizedBox(height: 16),
+                              _buildCapturedPieces(context),
+                            ],
+                          ),
                         ),
                       ),
                     ),
+                  ],
+                );
+              } else {
+                // Mobile layout - stacked
+                return SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        const GameControls(),
+                        const SizedBox(height: 16),
+                        const ChessBoardWidget(),
+                        const SizedBox(height: 16),
+                        _buildCapturedPieces(context),
+                        const SizedBox(height: 16),
+                        _buildMoveHistory(context),
+                      ],
+                    ),
                   ),
-                ],
-              );
-            } else {
-              // Mobile layout - stacked
-              return SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      const GameControls(),
-                      const SizedBox(height: 16),
-                      const ChessBoardWidget(),
-                      const SizedBox(height: 16),
-                      _buildCapturedPieces(context),
-                      const SizedBox(height: 16),
-                      _buildMoveHistory(context),
-                    ],
-                  ),
-                ),
-              );
-            }
-          },
+                );
+              }
+            },
+          ),
         ),
       ),
     );

@@ -12,11 +12,20 @@ class GameStateProvider extends ChangeNotifier {
   GameStatus _gameStatus;
   Position? _selectedPosition;
   List<ChessMove> _legalMovesForSelectedPiece;
+  PieceColor _playerColor; // Color assigned to the player
+  bool _isAIGame; // Whether playing against AI
+  bool _isLocalMultiplayer; // Whether local 2-player mode
 
-  GameStateProvider()
-    : _board = ChessBoard.standardSetup(),
-      _gameStatus = GameStatus.ongoing,
-      _legalMovesForSelectedPiece = [];
+  GameStateProvider({
+    PieceColor playerColor = PieceColor.white,
+    bool isAIGame = false,
+    bool isLocalMultiplayer = false,
+  }) : _board = ChessBoard.standardSetup(),
+       _gameStatus = GameStatus.ongoing,
+       _legalMovesForSelectedPiece = [],
+       _playerColor = playerColor,
+       _isAIGame = isAIGame,
+       _isLocalMultiplayer = isLocalMultiplayer;
 
   // Getters
   ChessBoard get board => _board;
@@ -24,6 +33,11 @@ class GameStateProvider extends ChangeNotifier {
   Position? get selectedPosition => _selectedPosition;
   List<ChessMove> get legalMovesForSelectedPiece => _legalMovesForSelectedPiece;
   PieceColor get currentTurn => _board.currentTurn;
+  PieceColor get playerColor => _playerColor;
+  PieceColor get aiColor =>
+      _playerColor == PieceColor.white ? PieceColor.black : PieceColor.white;
+  bool get isAIGame => _isAIGame;
+  bool get isLocalMultiplayer => _isLocalMultiplayer;
   List<ChessMove> get moveHistory => _board.moveHistory;
   ChessMove? get lastMove =>
       _board.moveHistory.isNotEmpty ? _board.moveHistory.last : null;

@@ -1,0 +1,44 @@
+{
+  "puzzles": [
+    {
+      "id": "001",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1",
+      "difficulty": "mate_in_1",
+      "solution": ["Qxf7#"],
+      "theme": "back_rank_mate",
+      "hint": "The king cannot escape!"
+    },
+    {
+      "id": "002",
+      "fen": "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 1",
+      "difficulty": "mate_in_1",
+      "solution": ["Bxf7#"],
+      "theme": "discovered_check",
+      "hint": "Look for undefended pieces!"
+    },
+    {
+      "id": "003",
+      "fen": "6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1",
+      "difficulty": "mate_in_1",
+      "solution": ["Re8#"],
+      "theme": "back_rank_mate",
+      "hint": "The back rank is vulnerable!"
+    },
+    {
+      "id": "004",
+      "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1",
+      "difficulty": "mate_in_2",
+      "solution": ["Qxf7+", "Qxf7"],
+      "theme": "smothered_mate",
+      "hint": "Force the king to move"
+    },
+    {
+      "id": "005",
+      "fen": "r2qkb1r/ppp2ppp/2p5/4P3/2Bn4/8/PPP2PPP/RNBQK2R w KQkq - 0 1",
+      "difficulty": "mate_in_2",
+      "solution": ["Qd5", "Qd5"],
+      "theme": "fork",
+      "hint": "Attack multiple pieces!"
+    }
+  ]
+}

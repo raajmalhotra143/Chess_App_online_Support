@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'presentation/providers/game_setup_provider.dart';
+import 'presentation/providers/settings_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/game_mode_screen.dart';
 import 'core/theme/app_theme.dart';
@@ -18,6 +19,7 @@ class ChessApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => GameSetupProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {

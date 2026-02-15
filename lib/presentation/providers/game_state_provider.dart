@@ -18,6 +18,8 @@ class GameStateProvider extends ChangeNotifier {
   final bool _isLocalMultiplayer; // Whether local 2-player mode
   final int _aiDifficulty; // AI difficulty level (1-15)
   bool _isAIThinking = false;
+  final List<ChessBoard> _boardHistory = [];
+  bool _isBoardFlipped = false;
 
   GameStateProvider({
     PieceColor playerColor = PieceColor.white,
@@ -37,6 +39,7 @@ class GameStateProvider extends ChangeNotifier {
     // If AI plays white (player selected black), AI moves first
     if (_isAIGame && _playerColor == PieceColor.black) {
       _makeAIMove();
+      _isBoardFlipped = true; // Auto-flip for black
     }
   }
 
@@ -52,10 +55,16 @@ class GameStateProvider extends ChangeNotifier {
   bool get isAIGame => _isAIGame;
   bool get isLocalMultiplayer => _isLocalMultiplayer;
   bool get isAIThinking => _isAIThinking;
+  bool get isBoardFlipped => _isBoardFlipped;
   List<ChessMove> get moveHistory => _board.moveHistory;
   ChessMove? get lastMove =>
       _board.moveHistory.isNotEmpty ? _board.moveHistory.last : null;
   List<ChessPiece> get capturedPieces => _board.capturedPieces;
+
+  void toggleBoardFlip() {
+    _isBoardFlipped = !_isBoardFlipped;
+    notifyListeners();
+  }
 
   /// Selects a piece at the given position
   void selectPiece(Position position) {
@@ -98,6 +107,9 @@ class GameStateProvider extends ChangeNotifier {
       return false;
     }
 
+    // Save state before move
+    _boardHistory.add(_board.copy());
+
     // Make the move
     _board.makeMove(move);
 
@@ -129,9 +141,17 @@ class GameStateProvider extends ChangeNotifier {
       // Small delay for UX so it doesn't feel instant/robotic
       await Future.delayed(const Duration(milliseconds: 500));
 
+      // AI Logic shouldn't update history?
+      // Actually we WANT to save history before AI move so we can undo it?
+      // Yes, if we want to undo the AI's move AND our move.
+      // But if we undo, we want to go back to OUR turn.
+
       final bestMove = await AIEngine.getBestMove(_board, _aiDifficulty);
 
       if (bestMove != null) {
+        // Save history before AI move too
+        _boardHistory.add(_board.copy());
+
         _board.makeMove(bestMove);
         _gameStatus = GameRules.getGameStatus(_board);
       } else {
@@ -179,6 +199,7 @@ class GameStateProvider extends ChangeNotifier {
     _gameStatus = GameStatus.ongoing;
     _selectedPosition = null;
     _legalMovesForSelectedPiece = [];
+    _boardHistory.clear();
     _isAIThinking = false;
 
     notifyListeners();
@@ -191,10 +212,33 @@ class GameStateProvider extends ChangeNotifier {
 
   /// Undoes the last move (if possible)
   void undoMove() {
-    // This would require storing previous board states
-    // For now, this is a placeholder
-    // TODO: Implement undo functionality in Phase 4
-    // void undoLastMove() { ... }
+    if (_isAIThinking) return;
+    if (_boardHistory.isEmpty) return;
+
+    // If AI game, we need to undo 2 moves (AI's move + Player's move)
+    // unless the AI just played and it's our turn?
+    // Usually AI moves immediately. So we are likely at Player's turn.
+    // _boardHistory should have: [Start, ... , PlayerMoved, AIMoved]
+    // Current board is after AI move.
+
+    if (_isAIGame) {
+      if (_boardHistory.length >= 2) {
+        _boardHistory
+            .removeLast(); // This was the state BEFORE AI move (i.e. after Player move)
+        _board = _boardHistory
+            .removeLast(); // This was state BEFORE Player move
+      } else if (_boardHistory.isNotEmpty) {
+        // Edge case: maybe only 1 move happened (e.g. Player move, AI crashed?)
+        _board = _boardHistory.removeLast();
+      }
+    } else {
+      // Local multiplayer or puzzle: undo one move
+      _board = _boardHistory.removeLast();
+    }
+
+    _gameStatus = GameRules.getGameStatus(_board);
+    _selectedPosition = null;
+    _legalMovesForSelectedPiece = [];
     notifyListeners();
   }
 

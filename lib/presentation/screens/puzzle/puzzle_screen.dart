@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/puzzle.dart';
 import '../../../data/models/chess_move.dart';
-import '../../../data/models/position.dart';
+import '../../../data/models/chess_piece.dart'; // Added
 import '../../providers/game_state_provider.dart';
 import '../../widgets/chess_board_widget.dart';
 
@@ -22,6 +22,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
   bool _isLoading = true;
   String? _message;
   bool _isSuccess = false;
+  ChessMove? _lastHandledMove; // Track handled moves
 
   @override
   void initState() {
@@ -34,8 +35,10 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
       final String jsonString = await rootBundle.loadString(
         'assets/data/puzzles.json',
       );
-      final Map<String, dynamic> json = json.decode(jsonString);
-      final List<dynamic> puzzlesJson = json['puzzles'];
+      final Map<String, dynamic> jsonData = json.decode(
+        jsonString,
+      ); // Fixed shadowing
+      final List<dynamic> puzzlesJson = jsonData['puzzles'];
 
       setState(() {
         _puzzles = puzzlesJson.map((p) => Puzzle.fromJson(p)).toList();
@@ -59,57 +62,105 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
     }
   }
 
-  void _onMoveMade(GameStateProvider gameState, ChessMove move) {
+  void _onMoveMade(BuildContext context, GameStateProvider gameState) {
+    // This is called when gameState changes
+    final lastMove = gameState.lastMove;
+    if (lastMove == null) return;
+
+    // Check if we already handled this move (simple check: valid puzzle index implies we are active)
+    if (_isSuccess || _message != null) return;
+
     final puzzle = _puzzles[_currentPuzzleIndex];
-    final expectedMoveStr = puzzle.solution.first;
 
-    // Convert move to algebraic notation (simplified check)
-    // Ideally we'd have a robust algebraic converter, but for now we can infer
-    // matches by checking board state or implementing a move parser.
-    // However, the puzzle solution is in algebraic (e.g. "Ra8#").
-    // Let's assume for this phase we just check if it matches the *intended* move coordinates.
-    // But puzzle.solution only has algebraic strings!
-    // We need to either:
-    // 1. Convert our move to algebraic
-    // 2. Parse solution to from/to coordinates
+    // We need to compare lastMove with puzzle.solution[0]
+    // puzzle.solution[0] is e.g. "Qxf7#"
 
-    // Validating purely on algebraic string is hard without a full generator.
-    // Let's implement a simple coordinate parser for the solution if it's in simplified format,
-    // OR just say "Correct!" if the resulting board state matches? No, that's hard.
+    // The board is already updated, so we can't easily generate SAN that depends on "before" state (like ambiguity)
+    // BUT, we can just check if the destination matches and piece matches.
 
-    // Let's TRY to convert our move to SAN or similar. All we really need is logical equality.
-    // Actually, Phase 3 requirement says "Puzzle data structure (FEN format)... Solution reveal".
-    // Let's assume the move matches if it corresponds to the solution string.
+    // Let's try matching the TARGET square and PIECE type.
+    // Solution: "Qxf7#" -> Piece Q, To f7.
+    // This is robust enough for most basic puzzles.
 
-    // For now, let's just checking if the move is legal (which GameStateProvider ensured)
-    // AND if it's the *only* winning move?
-    // The simplified approach: Just accept the move if it checkmates (for Mate in 1)?
-    // But for Mate in 2, we need sequence.
+    final solutionStr = puzzle.solution.first;
+    bool match = _checkSolutionMatch(lastMove, solutionStr, gameState.board);
 
-    // Hack: For this implementation, I'll rely on the user finding the move that causes checkmate/best advantage effectively.
-    // But rigorous checking needs move string parsing.
-    // Let's parse the solution string (e.g. "Qh5#") roughly.
-    // This is complex.
-
-    // ALTERNATIVE: Use a pre-defined list of moves in JSON that uses coordinates?
-    // The sample JSON likely uses standard notation.
-
-    // Let's perform a simple check:
-    // If the puzzle is "Mate in 1", does the move result in Checkmate?
-    if (puzzle.difficulty == PuzzleDifficulty.mateIn1) {
-      if (gameState.isGameOver && gameState.gameStatus.name == 'checkmate') {
-        _handleSuccess();
-      } else {
-        _handleFailure(gameState);
-      }
+    if (match) {
+      _handleSuccess();
     } else {
-      // For multi-move puzzles, this is harder without a full engine/parser.
-      // Let's just say "Correct" if it matches checkmate for now.
-      // TODO: Implement full algebraic notation parser in Phase 4.
-      if (gameState.isGameOver && gameState.gameStatus.name == 'checkmate') {
-        _handleSuccess();
-      }
+      // If it was the player's turn and they made a wrong move
+      // (Wait, only player moves trigger this?)
+      // Yes, we only listen to changes.
+      _handleFailure(gameState);
     }
+  }
+
+  bool _checkSolutionMatch(ChessMove move, String solutionSan, dynamic board) {
+    // board is ChessBoard
+    // simple parser
+    // 1. Target square
+    // "Qxf7#" -> f7.
+    // Regex to find [a-h][1-8]
+    final targetMatch = RegExp(r'([a-h][1-8])').firstMatch(solutionSan);
+    if (targetMatch == null) return false;
+
+    final targetStr = targetMatch.group(1)!;
+    final moveTargetStr =
+        '${String.fromCharCode('a'.codeUnitAt(0) + move.to.file)}${move.to.rank + 1}';
+
+    if (targetStr != moveTargetStr) return false;
+
+    // 2. Piece type
+    // If starts with K, Q, R, B, N -> piece.
+    // If lower case or no letter -> pawn.
+    // But wait, solutionSan might be "O-O".
+    if (solutionSan.startsWith('O-O')) {
+      return move.isCastle;
+    }
+
+    // Check piece type
+    // We need to know what piece moved. GameStateProvider doesn't easily store "movedPiece type" in lastMove
+    // (it has it implicitly, but we'd need to look at the board BEFORE the move or info in move).
+    // Actually `move.promotionPiece` exists.
+    // But standard piece? We can look at the piece currently at 'to' square!
+    final pieceAtTarget = (board as dynamic).getPieceAt(
+      move.to,
+    ); // Dynamic hack or cast
+    if (pieceAtTarget == null) return false;
+
+    String pieceChar = '';
+    switch (pieceAtTarget.type) {
+      case PieceType.pawn:
+        pieceChar = '';
+        break;
+      case PieceType.knight:
+        pieceChar = 'N';
+        break;
+      case PieceType.bishop:
+        pieceChar = 'B';
+        break;
+      case PieceType.rook:
+        pieceChar = 'R';
+        break;
+      case PieceType.queen:
+        pieceChar = 'Q';
+        break;
+      case PieceType.king:
+        pieceChar = 'K';
+        break;
+    }
+
+    if (pieceChar == '' && !RegExp(r'^[a-h]').hasMatch(solutionSan)) {
+      // Pawn move logic distinction
+    }
+
+    if (pieceChar != '' && !solutionSan.startsWith(pieceChar)) {
+      // Special case: 'N' might be 'Ncd7'.
+      // Just check if solution contains the piece char at start?
+      return false;
+    }
+
+    return true;
   }
 
   void _handleSuccess() {
@@ -143,16 +194,24 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
 
     return ChangeNotifierProvider(
       key: ValueKey(puzzle.id), // Re-create provider for new puzzle
-      create: (_) => GameStateProvider(
-        fen: puzzle.fenPosition,
-        // Calculate whose turn it is from FEN?
-        // ChessBoard.fromFEN sets it, but GameStateProvider needs to know player color.
-        // Usually puzzles are "White to play" or "Black to play".
-        // We can infer player color from FEN's active color.
-        playerColor: puzzle.fenPosition.contains(' w ')
+      create: (_) {
+        _lastHandledMove = null; // Reset for new puzzle
+        final playerColor = puzzle.fenPosition.contains(' w ')
             ? PieceColor.white
-            : PieceColor.black,
-      ),
+            : PieceColor.black;
+
+        final provider = GameStateProvider(
+          fen: puzzle.fenPosition,
+          playerColor: playerColor,
+        );
+
+        // Flip board if playing as Black
+        if (playerColor == PieceColor.black) {
+          provider.toggleBoardFlip();
+        }
+
+        return provider;
+      },
       child: Scaffold(
         appBar: AppBar(
           title: Text('Puzzle ${puzzle.id}'),
@@ -190,10 +249,15 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Consumer<GameStateProvider>(
                   builder: (context, gameState, _) {
-                    // Listen for game over to check solution (simplified)
-                    // Ideally we intercept the move, but here we react to state change
-                    // We can use a listener in initState/didChangeDependencies if we had access to provider there.
-                    // Or just wrapping the board in a listener widget.
+                    // Listen for moves
+                    if (gameState.lastMove != null &&
+                        gameState.lastMove != _lastHandledMove) {
+                      _lastHandledMove = gameState.lastMove;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _onMoveMade(context, gameState);
+                      });
+                    }
+
                     return Column(
                       children: [
                         const ChessBoardWidget(),

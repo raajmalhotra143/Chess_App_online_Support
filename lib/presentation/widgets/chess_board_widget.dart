@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/position.dart';
+import '../../data/models/chess_piece.dart';
+import '../../domain/chess_engine/game_rules.dart';
 import '../../presentation/providers/game_state_provider.dart';
 
 /// Chess board widget that displays the 8x8 grid and pieces
@@ -9,8 +11,27 @@ class ChessBoardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<GameStateProvider>(
-      builder: (context, gameState, child) {
+    // Use Selector instead of Consumer for better performance
+    // Only rebuild when board state, selected position, legal moves, or flip state changes
+    return Selector<GameStateProvider, _BoardState>(
+      selector: (context, gameState) => _BoardState(
+        board: gameState.board,
+        selectedPosition: gameState.selectedPosition,
+        legalMoves: gameState.legalMovesForSelectedPiece,
+        isBoardFlipped: gameState.isBoardFlipped,
+        lastMove: gameState.lastMove,
+        isKingInCheck: gameState.gameStatus == GameStatus.check,
+        currentTurn: gameState.board.currentTurn,
+      ),
+      shouldRebuild: (previous, next) =>
+          previous.board != next.board ||
+          previous.selectedPosition != next.selectedPosition ||
+          previous.legalMoves != next.legalMoves ||
+          previous.isBoardFlipped != next.isBoardFlipped ||
+          previous.lastMove != next.lastMove ||
+          previous.isKingInCheck != next.isKingInCheck ||
+          previous.currentTurn != next.currentTurn,
+      builder: (context, boardState, child) {
         return AspectRatio(
           aspectRatio: 1.0,
           child: Container(
@@ -28,16 +49,23 @@ class ChessBoardWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               child: Column(
                 children: List.generate(8, (rankIndex) {
-                  final rank = 7 - rankIndex;
+                  final rank = boardState.isBoardFlipped
+                      ? rankIndex
+                      : 7 - rankIndex;
+
                   return Expanded(
                     child: Row(
-                      children: List.generate(8, (file) {
+                      children: List.generate(8, (fileIndex) {
+                        final file = boardState.isBoardFlipped
+                            ? 7 - fileIndex
+                            : fileIndex;
+
                         final position = Position(rank: rank, file: file);
                         return Expanded(
                           child: _buildSquare(
                             context,
                             position,
-                            gameState,
+                            boardState,
                             rank,
                             file,
                           ),
@@ -57,20 +85,36 @@ class ChessBoardWidget extends StatelessWidget {
   Widget _buildSquare(
     BuildContext context,
     Position position,
-    GameStateProvider gameState,
+    _BoardState boardState,
     int rank,
     int file,
   ) {
-    final piece = gameState.board.getPieceAt(position);
-    final isSelected = gameState.selectedPosition == position;
-    final isValidMove = gameState.isValidMoveTarget(position);
+    final piece = boardState.board.getPieceAt(position);
+    final isSelected = boardState.selectedPosition == position;
+    final isValidMove = boardState.legalMoves.any(
+      (move) => move.to == position,
+    );
     final isLight = (rank + file) % 2 != 0;
-    final isLastMoveFrom = gameState.lastMove?.from == position;
-    final isLastMoveTo = gameState.lastMove?.to == position;
+    final isLastMoveFrom = boardState.lastMove?.from == position;
+    final isLastMoveTo = boardState.lastMove?.to == position;
+
+    // Check if this square contains a king in check
+    final isKingInCheck =
+        piece != null &&
+        piece.type == PieceType.king &&
+        boardState.isKingInCheck &&
+        piece.color == boardState.currentTurn;
+
+    // Access gameState only for onTap (doesn't cause rebuild)
+    final gameState = Provider.of<GameStateProvider>(context, listen: false);
 
     // Determine square color
     Color squareColor;
-    if (isSelected) {
+    if (isKingInCheck) {
+      squareColor = const Color(
+        0xFFFF5252,
+      ).withValues(alpha: 0.7); // Red glow for check
+    } else if (isSelected) {
       squareColor = const Color(0xFF9DB4FF); // Blue highlight
     } else if (isLastMoveFrom || isLastMoveTo) {
       squareColor = const Color(0xFFCDD26A); // Yellow highlight for last move
@@ -82,9 +126,20 @@ class ChessBoardWidget extends StatelessWidget {
 
     return GestureDetector(
       onTap: () => gameState.onSquareTapped(position),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: squareColor,
+          // Add box shadow for king in check
+          boxShadow: isKingInCheck
+              ? [
+                  BoxShadow(
+                    color: Colors.red.withValues(alpha: 0.6),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : null,
           // Add diagonal stripes to light squares
           image: isLight && !isSelected && !isLastMoveFrom && !isLastMoveTo
               ? DecorationImage(
@@ -181,4 +236,56 @@ class DiagonalStripePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Immutable state class for optimized board rendering
+class _BoardState {
+  final dynamic board; // ChessBoard
+  final Position? selectedPosition;
+  final List<dynamic> legalMoves; // List<ChessMove>
+  final bool isBoardFlipped;
+  final dynamic lastMove; // ChessMove?
+  final bool isKingInCheck;
+  final dynamic currentTurn; // PieceColor
+
+  const _BoardState({
+    required this.board,
+    required this.selectedPosition,
+    required this.legalMoves,
+    required this.isBoardFlipped,
+    required this.lastMove,
+    required this.isKingInCheck,
+    required this.currentTurn,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _BoardState &&
+          runtimeType == other.runtimeType &&
+          board == other.board &&
+          selectedPosition == other.selectedPosition &&
+          _listEquals(legalMoves, other.legalMoves) &&
+          isBoardFlipped == other.isBoardFlipped &&
+          lastMove == other.lastMove &&
+          isKingInCheck == other.isKingInCheck &&
+          currentTurn == other.currentTurn;
+
+  @override
+  int get hashCode =>
+      board.hashCode ^
+      (selectedPosition?.hashCode ?? 0) ^
+      Object.hashAll(legalMoves) ^
+      isBoardFlipped.hashCode ^
+      (lastMove?.hashCode ?? 0) ^
+      isKingInCheck.hashCode ^
+      (currentTurn?.hashCode ?? 0);
+
+  bool _listEquals(List a, List b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }

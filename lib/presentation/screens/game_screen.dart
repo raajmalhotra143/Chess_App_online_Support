@@ -422,15 +422,36 @@ class _GameScreenState extends State<GameScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(icon: const Icon(Icons.play_arrow), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.chevron_left), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.chevron_right), onPressed: () {}),
+          // Undo
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () => Provider.of<GameStateProvider>(
+              context,
+              listen: false,
+            ).undoMove(),
+            tooltip: 'Undo',
+          ),
+          // Rotate Board
           IconButton(
             icon: const Icon(Icons.flip_camera_android),
-            onPressed: () {},
+            onPressed: () => Provider.of<GameStateProvider>(
+              context,
+              listen: false,
+            ).toggleBoardFlip(),
+            tooltip: 'Flip Board',
           ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.close), onPressed: () {}),
+          // New Game
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _showRestartDialog(context),
+            tooltip: 'New Game',
+          ),
+          // Exit
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.of(context).pop(),
+            tooltip: 'Exit',
+          ),
         ],
       ),
     );
@@ -463,6 +484,29 @@ class _GameScreenState extends State<GameScreen> {
         color: color,
         shape: BoxShape.circle,
         border: Border.all(color: Colors.grey[300]!, width: 2),
+      ),
+    );
+  }
+
+  void _showRestartDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Start New Game?'),
+        content: const Text('Current progress will be lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Provider.of<GameStateProvider>(context, listen: false).newGame();
+            },
+            child: const Text('New Game'),
+          ),
+        ],
       ),
     );
   }

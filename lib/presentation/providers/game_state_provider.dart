@@ -12,9 +12,9 @@ class GameStateProvider extends ChangeNotifier {
   GameStatus _gameStatus;
   Position? _selectedPosition;
   List<ChessMove> _legalMovesForSelectedPiece;
-  PieceColor _playerColor; // Color assigned to the player
-  bool _isAIGame; // Whether playing against AI
-  bool _isLocalMultiplayer; // Whether local 2-player mode
+  final PieceColor _playerColor; // Color assigned to the player
+  final bool _isAIGame; // Whether playing against AI
+  final bool _isLocalMultiplayer; // Whether local 2-player mode
 
   GameStateProvider({
     PieceColor playerColor = PieceColor.white,

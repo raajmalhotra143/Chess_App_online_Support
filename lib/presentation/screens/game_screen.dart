@@ -1,12 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/chess_piece.dart';
+import '../../domain/chess_engine/game_rules.dart';
 import '../../presentation/providers/game_state_provider.dart';
 import '../../presentation/widgets/chess_board_widget.dart';
+import '../../presentation/widgets/victory_dialog.dart';
 
 /// Main game screen with professional chess.com-style design
-class GameScreen extends StatelessWidget {
+class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
+
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  GameStatus? _lastGameStatus;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Listen for game status changes
+    final gameState = context.watch<GameStateProvider>();
+    final currentStatus = gameState.gameStatus;
+
+    // Show dialog only once when game ends
+    if (_lastGameStatus != currentStatus && _isGameOver(currentStatus)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showGameOverDialog(currentStatus, gameState);
+      });
+    }
+
+    _lastGameStatus = currentStatus;
+  }
+
+  bool _isGameOver(GameStatus status) {
+    return status == GameStatus.checkmate ||
+        status == GameStatus.stalemate ||
+        status == GameStatus.draw;
+  }
+
+  void _showGameOverDialog(GameStatus status, GameStateProvider gameState) {
+    final winner = gameState.getWinner();
+    String title;
+    String message;
+
+    switch (status) {
+      case GameStatus.checkmate:
+        title = 'Checkmate!';
+        message = winner == PieceColor.white ? 'White wins!' : 'Black wins!';
+        break;
+      case GameStatus.stalemate:
+        title = 'Stalemate';
+        message = 'The game is a draw.';
+        break;
+      case GameStatus.draw:
+        title = 'Draw';
+        message = 'The game ended in a draw.';
+        break;
+      default:
+        return;
+    }
+
+    showVictoryDialog(
+      context,
+      title: title,
+      message: message,
+      winner: winner,
+      onRematch: () => gameState.newGame(),
+      onHome: () {
+        // TODO: Navigate to home screen when implemented
+        gameState.newGame();
+      },
+      onViewSummary: null, // TODO: Implement game summary later
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

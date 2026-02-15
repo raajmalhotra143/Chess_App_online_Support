@@ -312,6 +312,7 @@ class _AILevelSelectorDialogState extends State<AILevelSelectorDialog> {
             playerColor: _selectedColor,
             isAIGame: true,
             isLocalMultiplayer: false,
+            aiDifficulty: _selectedLevel,
           ),
           child: const GameScreen(),
         ),

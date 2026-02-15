@@ -18,7 +18,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   GameRoom? _createdRoom;
   bool _isCreating = false;
   String? _error;
-  String _selectedColor = 'white';
+  final String _selectedColor = 'white';
 
   @override
   void initState() {
@@ -45,9 +45,8 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
         _isCreating = false;
       });
 
-      // Listen for opponent joining
       _repository.watchRoom(room.roomId).listen((updatedRoom) {
-        if (updatedRoom != null && updatedRoom.guestUid != null) {
+        if (updatedRoom != null && updatedRoom.guestUid != null && mounted) {
           // Opponent joined! Navigate to game
           Navigator.pushReplacementNamed(
             context,
@@ -73,13 +72,12 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     }
   }
 
-  void _shareRoomCode() {
-    if (_createdRoom != null) {
-      Share.share(
-        'Join my chess game! Room code: ${_createdRoom!.roomId}',
-        subject: 'Chess Game Invitation',
-      );
-    }
+  Future<void> _shareRoomCode() async {
+    // ignore: deprecated_member_use
+    await Share.share(
+      'Join my chess game! Room code: ${_createdRoom!.roomId}',
+      subject: 'Chess Game Invitation',
+    );
   }
 
   @override

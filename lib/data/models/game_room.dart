@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
-import '../../data/models/chess_move.dart';
-import '../../domain/chess_engine/game_rules.dart';
 
 /// Online game room model
 class GameRoom {
@@ -71,7 +69,7 @@ class GameRoom {
       },
       'moves': moves,
       'createdAt': Timestamp.fromDate(createdAt),
-      'lastMoveAt': lastMoveAt != null ? Timestamp.fromDate(lastMoveAt) : null,
+      'lastMoveAt': lastMoveAt != null ? Timestamp.fromDate(lastMoveAt!) : null,
     };
   }
 

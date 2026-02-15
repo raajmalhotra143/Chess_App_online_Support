@@ -86,7 +86,7 @@ class GameModeScreen extends StatelessWidget {
                 // Settings button
                 TextButton.icon(
                   onPressed: () {
-                    // TODO: Navigate to settings
+                    // TODO: Navigate to settings (Phase 4)
                   },
                   icon: const Icon(Icons.settings),
                   label: const Text('Settings'),

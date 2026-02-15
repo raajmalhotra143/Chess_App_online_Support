@@ -70,10 +70,12 @@ class _GameScreenState extends State<GameScreen> {
       winner: winner,
       onRematch: () => gameState.newGame(),
       onHome: () {
-        // TODO: Navigate to home screen when implemented
-        gameState.newGame();
+        // TODO: Navigate to home screen (Phase 4)
+        Navigator.pop(context);
       },
-      onViewSummary: null, // TODO: Implement game summary later
+      onViewSummary: () {
+        // TODO: Implement game summary (Phase 4)
+      },
     );
   }
 

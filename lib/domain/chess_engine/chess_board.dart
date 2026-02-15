@@ -59,6 +59,79 @@ class ChessBoard {
     return board;
   }
 
+  /// Initializes the board from a FEN string
+  factory ChessBoard.fromFEN(String fen) {
+    final board = ChessBoard();
+    final parts = fen.split(' ');
+
+    // 1. Piece placement
+    final ranks = parts[0].split('/');
+    for (int r = 0; r < 8; r++) {
+      final rank = 7 - r;
+      int file = 0;
+      for (int i = 0; i < ranks[r].length; i++) {
+        final char = ranks[r][i];
+        if (RegExp(r'[1-8]').hasMatch(char)) {
+          file += int.parse(char);
+        } else {
+          final color = char == char.toUpperCase()
+              ? PieceColor.white
+              : PieceColor.black;
+          final type = _getPieceTypeFromChar(char.toLowerCase());
+          board.setPieceAt(
+            Position(rank: rank, file: file),
+            ChessPiece(type: type, color: color),
+          );
+          file++;
+        }
+      }
+    }
+
+    // 2. Active color
+    board.currentTurn = parts[1] == 'w' ? PieceColor.white : PieceColor.black;
+
+    // 3. Castling availability
+    final castling = parts[2];
+    board.whiteCanCastleKingSide = castling.contains('K');
+    board.whiteCanCastleQueenSide = castling.contains('Q');
+    board.blackCanCastleKingSide = castling.contains('k');
+    board.blackCanCastleQueenSide = castling.contains('q');
+
+    // 4. En passant target square
+    // (Simplified: Parsing logic for en passant target if needed)
+
+    // 5. Halfmove clock
+    if (parts.length > 4) {
+      board.halfmoveClock = int.tryParse(parts[4]) ?? 0;
+    }
+
+    // 6. Fullmove number
+    if (parts.length > 5) {
+      board.fullmoveNumber = int.tryParse(parts[5]) ?? 1;
+    }
+
+    return board;
+  }
+
+  static PieceType _getPieceTypeFromChar(String char) {
+    switch (char) {
+      case 'p':
+        return PieceType.pawn;
+      case 'n':
+        return PieceType.knight;
+      case 'b':
+        return PieceType.bishop;
+      case 'r':
+        return PieceType.rook;
+      case 'q':
+        return PieceType.queen;
+      case 'k':
+        return PieceType.king;
+      default:
+        return PieceType.pawn;
+    }
+  }
+
   /// Sets up pieces in standard chess starting position
   void _setupStandardPieces() {
     // Set up pawns

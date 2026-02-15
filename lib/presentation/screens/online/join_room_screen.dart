@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../data/repositories/online_game_repository.dart';
-import '../../../data/models/game_room.dart';
 
 /// Screen for joining an existing online game room
 class JoinRoomScreen extends StatefulWidget {

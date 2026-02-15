@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'presentation/providers/game_setup_provider.dart';
 import 'presentation/providers/settings_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/game_mode_screen.dart';
 import 'core/theme/app_theme.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const ChessApp());
 }
 
